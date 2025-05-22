@@ -53,5 +53,34 @@ definiciones_mtg = {
     "TOKEN": "Some spells and abilities can create tokens. Tokens are always permanents, and they’re affected by all the rules, spells, and abilities that affect permanents. If one of your tokens leaves the battlefield, however, it moves to the new zone (such as your graveyard or your hand) and then immediately vanishes from the game.",
     "VIGILANCE": "A keyword ability found on creatures. A creature with vigilance doesn’t tap to attack. Vigilance doesn’t allow a tapped creature or a creature that entered the battlefield this turn to attack.",
     "X": "When you see X in a mana cost or an activation cost, you get to choose the number that X stands for. For example, Pull from Tomorrow is an instant that costs X. Its text reads, “Draw X cards, then discard a card.” When you cast Pull from Tomorrow, you choose what number X is. If you pick one, for example, Pull from Tomorrow costs 1, and you will draw one card, then choose and discard a card from your hand. If you pick eight, Pull from Tomorrow costs 8, and you will draw eight cards, then choose and discard a card from your hand.",
-    "YOU": "The word “you” on a spell or ability refers to the current controller of that spell or ability."
+    "YOU": "The word “you” on a spell or ability refers to the current controller of that spell or ability.",
+
+    "CÓMO FUNCIONA UN TURNO": "A turn consists of several phases: beginning (draw), main phase, combat, second main phase, and end. Each player performs actions in these phases in order.",
+    "DECK" : "The deck size depends on the format. For the Standard / Modern / Pioneer formats: Minimum 60 cards. No max limit, but you must shuffle without help. Up to 15 sideboard cards allowed. For the Commander fomat (EDH): Exactly 100 cards, including your commander. Only one copy of each card, except basic lands. For the Limited format (Draft / Sealed): Minimum 40 cards. Use any number of the cards you opened + unlimited basic lands.",
+    "MOMENTO": "Unlike sorceries, you can play an instant at almost any time — even during your opponent’s turn. You can cast them: During any phase, as long as you have priority, in response to another spell or ability, during combat, or at the end of a turn.",
+}
+
+alias_mtg = {
+    "FASES DEL TURNO": "TURNO",
+    "COMO ES UN TURNO": "TURNO",
+    "QUE ES UN TURNO": "TURNO",
+    "ESTRUCTURA DEL TURNO": "TURNO",
+    "QUE PASA EN UN TURNO": "TURNO",
+    "QUE SUCEDE EN UN TURNO": "TURNO",
+    "COMO JUGAR UN TURNO": "TURNO",
+    "EN QUE CONSISTE UN TURNO": "TURNO",
+    "CUANTAS CARTAS EN UN MAZO": "DECK",
+    "TAMAÑO DEL MAZO": "DECK",
+    "CUANTAS CARTAS TIENE UN MAZO": "DECK",
+    "NUMERO DE CARTAS EN UN MAZO": "DECK",
+    "CARTAS MINIMAS EN UN MAZO": "DECK",
+    "TAMAÑO DE MAZO": "DECK",
+    "CANTIDAD DE CARTAS EN MAZO": "DECK",
+    "LIMITE DE CARTAS EN MAZO": "DECK",
+    "CUANTAS CARTAS NECESITO PARA UN MAZO": "DECK",
+    "MOMENTO": "INSTANT",
+    "CUANDO JUGAR": "INSTANT",
+    "CUANDO SE USA": "INSTANT",
+    "CUANDO USAR": "INSTANT",
+    "INSTANTÁNEO": "INSTANT"
 }
