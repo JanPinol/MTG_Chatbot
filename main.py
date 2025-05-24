@@ -1,6 +1,6 @@
 ##### DONE 1-Cuanto cuesta esta carta? COSTE MANA
 ##### DONE 2-Cuanto vale esta carta? VALOR PRECIO DINERO
-##### DONE 3-De que tipo es esta carta? TIPO DE CARTA
+##### DONE 3-De que tipo es esta carta? TIPO DE CARTA *no me va*
 ##### DONE 4-Cuales son las reglas de esta carta? TEXTO REGLAS HABILIDADES
 ##### DONE 5-Dame una imagen de esta carta. IMAGEN FOTO
 ##### DONE 6-¿Qué colores tiene "Niv-Mizzet, Parun"?
@@ -10,15 +10,15 @@
 ##### DONE 10-Creame un mazo verde
 ##### DONE 11-tiene x carta alguna norma especial?
 ##### DONE 12- cuanto ataque tiene esta carta o defensa
-##### DONE 13- es legal esta carta? se puede usar?
+##### DONE 13- es legal esta carta? se puede usar? *peta en nombres compuestos*
 ##### DONE 14- Dime los modos de juego de magic
-##### DONE 15-Que tipo de tierras/criaturas/artefactos/encantamientos hay
+##### DONE 15-Que tipo de tierras/criaturas/artefactos/encantamientos hay *no me va*
 ##### DONE 16- Que habilidades tiene X carta?
-##### DONE 17- ¿Puedes darme un ejemplo de una carta con "Trample"?
+##### DONE 17- ¿Puedes darme un ejemplo de una carta con "Trample"? *no me va, me explica la mecanica no me da la carta*
 ##### DONE #18- En que consite un turno en magic?
 ##### DONE #19- cuantas cartas suele tener un mazo (lo tendriamos que definir
-##### DONE #20 - En que momento se usa un instantaneo?
-##### DONE #21 - Que cartas comunes valen más de 10 euros?
+##### DONE #20 - En que momento se usa un instantaneo? *no me va*
+##### DONE #21 - Que cartas comunes valen más de 10 euros? *no me va*
 ##### DONE #22 - Cual es la carta mas cara de Modern Horizons 2?
 ##### DONE #23 - Cual fué la primera carta de Eldrazi?
 ##### DONE #24 - Cuantas ediciones tiene Sol Ring?
