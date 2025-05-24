@@ -17,6 +17,13 @@ Simply chat with our open-source AI to boost your MTG experience.
 
 ---
 
+To start the server use command:
+```
+$ streamlit run app.py
+```
+
+---
+
 ## Contributors
 
 - **Gael Caballero** - [gael.caballero@students.salle.url.edu]
