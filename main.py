@@ -2,19 +2,19 @@
 ##### DONE 2-Cuanto vale esta carta? VALOR PRECIO DINERO
 ##### DONE 3-De que tipo es esta carta? TIPO DE CARTA
 ##### DONE 4-Cuales son las reglas de esta carta? TEXTO REGLAS HABILIDADES
-#5-Dame una imagen de esta carta. IMAGEN FOTO
-#6-¿Qué colores tiene "Niv-Mizzet, Parun"?
+##### DONE 5-Dame una imagen de esta carta. IMAGEN FOTO
+##### DONE 6-¿Qué colores tiene "Niv-Mizzet, Parun"?
 ##### DONE 7-¿Qué es la habilidad de "Deathtouch"? habilidades
 ##### DONE 8-Explícame cómo funciona "Flash". mecanicas
-#9-Dime una carta roja
-#10-Creame un mazo verde
-#11-tiene x carta alguna norma especial?
-#12- cuanto ataque tiene esta carta o defensa
-#13- es legal esta carta? se puede usar?
-#14- Dime los modos de juego de magic
-#15-Que tipo de tierras/criaturas/artefactos/encantamientos hay
-#16- Que habilidades tiene X carta?
-#17- ¿Puedes darme un ejemplo de una carta con "Trample"?
+##### DONE 9-Dime una carta roja
+##### DONE 10-Creame un mazo verde
+##### DONE 11-tiene x carta alguna norma especial?
+##### DONE 12- cuanto ataque tiene esta carta o defensa
+##### DONE 13- es legal esta carta? se puede usar?
+##### DONE 14- Dime los modos de juego de magic
+##### DONE 15-Que tipo de tierras/criaturas/artefactos/encantamientos hay
+##### DONE 16- Que habilidades tiene X carta?
+##### DONE 17- ¿Puedes darme un ejemplo de una carta con "Trample"?
 ##### DONE #18- En que consite un turno en magic?
 ##### DONE #19- cuantas cartas suele tener un mazo (lo tendriamos que definir
 ##### DONE #20 - En que momento se usa un instantaneo?
@@ -23,414 +23,204 @@
 ##### DONE #23 - Cual fué la primera carta de Eldrazi?
 ##### DONE #24 - Cuantas ediciones tiene Sol Ring?
 ##### DONE #25 - Hazme una lista de los contrahechizos azules mas jugados
-
-import numpy
-import spacy
-import thinc
+from __future__ import annotations
 import re
+from typing import List, Optional
 import requests
+import spacy
 from definiciones import definiciones_mtg
-import time
 
-print("NumPy version:", numpy.__version__)
-print("spaCy version:", spacy.__version__)
-print("Thinc version:", thinc.__version__)
-nlp = spacy.load("es_core_news_md")
+nlp = spacy.load("es_core_news_md")  # NLP model
 
-# Mapa de símbolos, lo que hace esto es que la api te devuelve el coste de mana o acciones de esta forma {T} {U}, esto sustituye estas cosas por simbolos
-#o numeros sin los corchetes, si hay alguno que falta, ponedlo, la web desde donde se pillan es esta
-#https://emojipedia.org/large-red-circle
-SYMBOL_MAP = {
-    "W": "⚪",
-    "U": "🔵",
-    "B": "⚫",
-    "R": "🔴",
-    "G": "🟢",
-    "C": "◇",
-    "T": "↻",
-    "X": "X",
-    # números de 0 a 20, por ejemplo:
-    **{str(i): str(i) for i in range(0, 21)}
-}
+# ---------------------------------------------------------------------------
+# 1· Tablas de traducción y utilidades
+# ---------------------------------------------------------------------------
+SYMBOL_MAP = {"W":"⚪","U":"🔵","B":"⚫","R":"🔴","G":"🟢","C":"◇","T":"↻","X":"X", **{str(i):str(i) for i in range(21)}}
+COLOR_MAP = {"W":"Blanco","U":"Azul","B":"Negro","R":"Rojo","G":"Verde","C":"Incoloro"}
+TIPO_MAP = {"tierras":"land-types","criaturas":"creature-types","artefactos":"artifact-types","encantamientos":"enchantment-types"}
 
-#cambiar el texto por los simbolos
 def reemplazar_simbolos(texto: str) -> str:
-    def _repl(m):
-        clave = m.group(1)  # el contenido dentro de {}
-        return SYMBOL_MAP.get(clave, m.group(0))
-    return re.sub(r"\{([WUBRGCTX0-9]+)\}", _repl, texto)
+    """Sustituye {X} por emoji."""
+    return re.sub(r"\{([WUBRTCX0-9]+)\}", lambda m: SYMBOL_MAP.get(m.group(1), m.group(0)), texto)
 
+# ---------------------------------------------------------------------------
+# 2· API helpers
+# ---------------------------------------------------------------------------
 
-# Pregunta 5: Busca en la api la carta y devuelve la imagen
-def obtener_imagen_carta(nombre_carta):
-    response = requests.get(f"https://api.scryfall.com/cards/named?fuzzy={nombre_carta}")
-    if response.status_code == 200:
-        datos = response.json()
-        return datos['image_uris']['normal']
-    return "No se encontró la imagen de la carta."
-
-
-# Pregunta 6: Busca en la api la carta y devuelve el coste de mana
-def obtener_colores_carta(nombre_carta):
-    response = requests.get(f"https://api.scryfall.com/cards/named?fuzzy={nombre_carta}")
-    if response.status_code == 200:
-        datos = response.json()
-        return datos['colors']  # ['U', 'R'] por ejemplo
-    return "No se pudo determinar el color de la carta."
-
-
-# Pregunta 9: Busca una carta aleatoria de un color específico
-def carta_aleatoria_color(color):
-    response = requests.get(f"https://api.scryfall.com/cards/random?q=color={color.lower()}")
-    if response.status_code == 200:
-        datos = response.json()
-        return datos['name']
-    return "No se encontró una carta de ese color."
-
-
-# Pregunta 10: Crea un mazo de cartas de un color específico
-def crear_mazo_color(color, cantidad=10):  # 10, ya que 40 tardaria demasiado
-    mazo = []
-    for _ in range(cantidad):
-        carta = carta_aleatoria_color(color)
-        mazo.append(carta)
-    return mazo
-
-
-# Pregunta 11: Busca en la api si la carta tiene alguna habilidad especial
-def buscar_habilidad_en_carta(nombre_carta):
-    response = requests.get(f"https://api.scryfall.com/cards/named?fuzzy={nombre_carta}")
-    if response.status_code == 200:
-        datos = response.json()
-        texto = datos.get('oracle_text', '').upper()
-        habilidades = [clave for clave in definiciones_mtg if clave in texto]
-        return habilidades if habilidades else "No se encontraron habilidades especiales."
-    return "Carta no encontrada."
-
-
-# Pregunta 12: Busca en la api el ataque y defensa de la carta
-def obtener_fuerza_defensa(nombre_carta):
-    response = requests.get(f"https://api.scryfall.com/cards/named?fuzzy={nombre_carta}")
-    if response.status_code == 200:
-        datos = response.json()
-        return f"Ataque: {datos.get('power', '?')}, Defensa: {datos.get('toughness', '?')}"
-    return "Carta no encontrada."
-
-
-# Pregunta 13: Busca en la api si la carta es legal en un formato
-def es_legal(nombre_carta, formato="commander"):
-    response = requests.get(f"https://api.scryfall.com/cards/named?fuzzy={nombre_carta}")
-    if response.status_code == 200:
-        datos = response.json()
-        legalidad = datos.get('legalities', {})
-        return f"Legal en {formato}: {legalidad.get(formato, 'desconocido')}"
-    return "Carta no encontrada."
-
-
-# busca en la api la carta en especifico
-def get_card_info(card_name):
-    url = f"https://api.scryfall.com/cards/named?fuzzy={card_name}"
-    response = requests.get(url)
-    if response.status_code == 200 and response.json().get("object") == "card":
-        return response.json()
+def get_card_info(nombre: str) -> Optional[dict]:
+    """Devuelve carta en ES o EN."""
+    for lang in ("es","en"):
+        r = requests.get(f"https://api.scryfall.com/cards/named?fuzzy={nombre}&lang={lang}")
+        if r.status_code == 200 and r.json().get("object")=="card":
+            return r.json()
     return None
 
+def obtener_imagen_carta(nombre: str) -> str:
+    c = get_card_info(nombre)
+    return c["image_uris"]["normal"] if c else "No se encontró la imagen."
 
-# busca en la api el set en especifico y devuelve la primera carta que tenga valor
-def get_set_info(url):
-    print(url)
-    response = requests.get(url).json()
-    for card in response.get("data", []):
-        price = card.get("prices", {}).get("eur")
-        if price:
-            return card["name"], price
-    return None, None
+def obtener_colores_carta(nombre: str) -> str:
+    c = get_card_info(nombre)
+    if not c: return "Carta no encontrada."
+    cols = c.get("colors",[]) or ["C"]
+    return ", ".join(COLOR_MAP.get(x,x) for x in cols)
 
+# Funciones de ejemplo/mazo
 
-# se dedica a revisar sinonimos de las palabras, se puede cambiar el nivel de sinonimo cambiando el valor de rango
-def check_word(palabras, tokens, rango):
-    kw_lemmas = {nlp(w)[0].lemma_.lower() for w in palabras}
-    for tok in tokens:
-        if tok.lemma_.lower() in kw_lemmas:
-            return True
+def carta_aleatoria_color(color: str) -> str:
+    r = requests.get(f"https://api.scryfall.com/cards/random?q=color={color}")
+    return r.json().get("name","¿?") if r.status_code==200 else "Error de conexión."
 
-    palabra_tokens = [nlp(w)[0] for w in palabras]
-    for pt in palabra_tokens:
-        for tok in tokens:
-            # print para ver la similitud que sale
-            # print(f"[VECTOR MATCH] palabra clave «{pt.text}» ≃ token «{tok.text}» ({pt.similarity(tok):.2f})")
-            if pt.has_vector and tok.has_vector and pt.similarity(tok) >= rango:
-                return True
-    return False
+def crear_mazo_color(color: str, n:int=10) -> List[str]:
+    return [carta_aleatoria_color(color) for _ in range(n)]
 
+# Datos de carta
 
-def extraer_nombre_carta(pregunta):
-    doc = nlp(pregunta)
+def listar_habilidades_carta(nombre: str) -> List[str]:
+    c = get_card_info(nombre)
+    if not c: return []
+    txt = c.get("oracle_text","" ).lower()
+    return [h for h in definiciones_mtg if h.lower() in txt]
 
-    # Primer Metodo, usamos Spacy para encontrar nombres de entidades y enviarselo a la api, si la api responde bien, devolvemos
+def obtener_fuerza_defensa(nombre: str) -> str:
+    c = get_card_info(nombre)
+    return f"Ataque: {c.get('power','?')}, Defensa: {c.get('toughness','?')}" if c else "Carta no encontrada."
+
+def es_legal(nombre: str, formato:str="commander") -> str:
+    c = get_card_info(nombre)
+    return f"Legal en {formato}: {c.get('legalities',{{}}).get(formato,'desconocido')}" if c else "Carta no encontrada."
+
+# ---------------------------------------------------------------------------
+# 3· NLP helpers
+# ---------------------------------------------------------------------------
+
+def check_word(palabras:List[str], tokens, thr:float) -> bool:
+    lem = {nlp(p)[0].lemma_.lower() for p in palabras}
+    for t in tokens:
+        if t.lemma_.lower() in lem: return True
+    pv = [nlp(p)[0] for p in palabras]
+    return any(pt.has_vector and tok.has_vector and pt.similarity(tok)>=thr
+               for pt in pv for tok in tokens)
+
+def extraer_nombre_carta(texto:str) -> Optional[str]:
+    doc = nlp(texto)
     for ent in doc.ents:
-        nombre = ent.text.strip()
-        if get_card_info(nombre):
-            print("Primero")
-            return nombre
-
-    # Segundo Metodo, buscamos conjuntos de palbras conspacy que tengan algun nombre y lo buscamos, quitamos cosas como el la y tal
+        if get_card_info(ent.text): return ent.text
     for chunk in reversed(list(doc.noun_chunks)):
-        # descartamos chunks sin PROPN
-        if not any(tok.pos_ == "PROPN" for tok in chunk):
-            continue
-        # limpiamos artículos y determinantes
-        nombre = re.sub(
-            r"\b(el|la|los|las|un|una|unos|unas|de|del|al)\b",
-            "",
-            chunk.text,
-            flags=re.IGNORECASE
-        ).strip()
-        if 3 <= len(nombre) <= 60 and get_card_info(nombre):
-            return nombre
-
-    # 3) Tercer metodo: prueba a hacer combinaciones con las 3 ultimas palabras enviadas
-    palabras = [tok.text for tok in doc if tok.is_alpha and not tok.is_stop]
-    # probamos pares y tríos
-    for size in (3, 2):
-        for i in range(len(palabras) - size + 1, 0, -1):
-            candidate = " ".join(palabras[i:i + size])
-            if get_card_info(candidate):
-                print("Tercero")
-                return candidate
-
+        if any(t.pos_=="PROPN" for t in chunk):
+            nombre = re.sub(r"\b(el|la|los|las|un|una|unos|unas|de|del|al)\b","",chunk.text,flags=re.I).strip()
+            if get_card_info(nombre): return nombre
     return None
 
+# ---------------------------------------------------------------------------
+# 4· Respuestas estáticas (#18-20)
+# ---------------------------------------------------------------------------
+TEXTO_TURNO = (
+    "Un turno se divide en cinco fases:\n"
+    "1. Enderezar\n2. Mantenimiento\n3. Fase principal\n4. Combate\n5. Segunda fase principal y limpieza."
+)
+TEXTO_TAMANIO_MAZO = (
+    "Tamaños habituales de mazo:\n"
+    "• Construido: 60 cartas mín.\n"
+    "• Limitado: 40 cartas mín.\n"
+    "• Commander: 100 + comandante."
+)
+TEXTO_INSTANTANEO = (
+    "Un instantáneo puede lanzarse siempre que tengas prioridad — incluso como respuesta a otro hechizo."
+)
 
-# se encarga de pedir cosas a la api sobre el set de cartas
-def set_respond(codigo, tokens):
-    if check_word(["caro"], tokens, 0.70):
-        url = f"https://api.scryfall.com/cards/search?q=set:{codigo}&order=eur&dir=desc"
-        descripcion, valor = get_set_info(url)
-        if descripcion is None or valor is None:
-            return f"No hay informacion disponible sobre este set"
-        return f"La carta mas cara de este set es {descripcion} con un valor de: {valor}"
-    elif check_word(["barato"], tokens, 0.70):
-        url = f"https://api.scryfall.com/cards/search?q=s%3A{codigo}&order=eur&dir=asc"
-        descripcion, valor = get_set_info(url)
-        if descripcion is None or valor is None:
-            return f"No hay informacion disponible sobre este set"
-        return f"La carta mas barata de este set es {descripcion} con un valor de: {valor}"
-    else:
-        return 0
-    # ///////////////////////////////////PRINTAR SOLUCIONES
+# ---------------------------------------------------------------------------
+# 5· Dispatcher principal (preguntas 1-25)
+# ---------------------------------------------------------------------------
+def responder_pregunta(pregunta:str) -> str:
+    low = pregunta.lower()
+    tokens = [t for t in nlp(low) if t.is_alpha]
 
+    # 1-6: propiedades básicas de carta
+    if check_word(["mana","coste"], tokens,0.5):
+        nom=get_card_info(extraer_nombre_carta(low))
+        return reemplazar_simbolos(nom["mana_cost"]) if nom else "Carta no encontrada."
+    if check_word(["precio","vale","cuesta"],tokens,0.5):
+        nom=get_card_info(extraer_nombre_carta(low))
+        return f"{nom['prices']['eur']}€" if nom else "Carta no encontrada."
+    if check_word(["tipo","categoria"],tokens,0.5):
+        nom=get_card_info(extraer_nombre_carta(low))
+        return nom.get("printed_type_line") or nom.get("type_line","?") if nom else "Carta no encontrada."
+    if check_word(["texto","efecto","regla"],tokens,0.5):
+        nom=get_card_info(extraer_nombre_carta(low))
+        txt = nom.get("printed_text") or nom.get("oracle_text","?") if nom else None
+        return reemplazar_simbolos(txt) if txt else "Carta no encontrada."
+    if check_word(["imagen","foto"],tokens,0.7):
+        return obtener_imagen_carta(extraer_nombre_carta(low))
+    if check_word(["color","colores"],tokens,0.7):
+        return obtener_colores_carta(extraer_nombre_carta(low))
 
-# se dedica a pedir a la api sobre una carta y tratar los datos
-def card_respond(campo, descripcion, pregunta):
-    # Extraer y validar nombre de la carta SI ES NECESARIO
-    nombre = extraer_nombre_carta(pregunta)
-    if not nombre:
-        return "No pude identificar un nombre de carta válido. ¿Podrías escribirlo exacto o más completo?"
+    # 7-8: definiciones de habilidades/mechanics
+    for hab in definiciones_mtg:
+        if hab.lower() in low or hab.lower().replace('-',' ') in low:
+            return f"{hab.title()}: {definiciones_mtg[hab]}"
 
-    # /////////////////////////////////Consultar la API (se ha de mejorar por cada tipo de pregunta
-    card = get_card_info(nombre)
-    if not card:
-        return f"No encontré la carta «{nombre}». Asegúrate de escribir bien el nombre."
+    # 9-10: ejemplos y mazos
+    if "carta roja" in low:
+        return "Ejemplo de carta roja: " + carta_aleatoria_color("red")
+    if "mazo verde" in low:
+        return "Mazo verde:\n" + "\n".join(crear_mazo_color("green"))
 
-    # ///////////////////////////////////PRINTAR SOLUCIONES
-    if campo == "image_uris":
-        return f"{descripcion}: {card['image_uris']['normal']}"
-    if campo == "eur":
-        return f"{descripcion}: {card['prices']['eur']}"
-    if campo in card:
-        return f"{descripcion}: {card[campo]}"
-    return "No encontré esa información específica en la carta."
+    # 11-13: normas, stats y legalidad
+    if check_word(["norma especial","habilidad especial"],tokens,0.7):
+        return ", ".join(listar_habilidades_carta(extraer_nombre_carta(low))) or "No se encontraron habilidades."
+    if check_word(["ataque","fuerza","defensa"],tokens,0.7):
+        return obtener_fuerza_defensa(extraer_nombre_carta(low))
+    if check_word(["legal","permitida","usar"],tokens,0.7):
+        return es_legal(extraer_nombre_carta(low))
 
+    # 14-17: formatos, subtipos y trample
+    if check_word(["modo","modos","formato","formatos"],tokens,0.7):
+        return "Construido, Limitado, Commander, Pauper, Brawl, etc."
+    for k,e in TIPO_MAP.items():
+        if k in low:
+            return ", ".join(requests.get(f"https://api.scryfall.com/catalog/{e}").json().get("data",[])[:30])
+    if ("trample" in low or "arrollar" in low) and "carta" in low:
+        return requests.get("https://api.scryfall.com/cards/random?q=o:trample").json().get("name","?")
 
-# se encarga de responder la pregunta que han echo
-def responder_pregunta(pregunta):
-    pregunta = pregunta.lower()
-    doc = nlp(pregunta)
-    # esto filtra las comas y signos de puntuacion, se le puede añadir la linea comentada pero quitara algunos verbos, cosa que para preguntas con
-    # "hacer" lo rompe,
-    tokens = [token for token in doc if token.is_alpha]  # and not token.is_stop
+    # 18-20: respuestas estáticas
+    if "turno" in low:       return TEXTO_TURNO
+    if "cartas" in low and ("cuantas" in low or "cuántas" in low): return TEXTO_TAMANIO_MAZO
+    if "instantáneo" in low and "cuando" in low: return TEXTO_INSTANTANEO
 
-    # ver si se esta hablando de un set
-    resp = requests.get("https://api.scryfall.com/sets").json()
-    for s in resp.get("data", []):
-        if s["name"].lower() in pregunta:
-            print("yes")
-            texto = set_respond(s["code"], tokens)
-            if texto != 0:
-                return texto
+    # 21-25: búsquedas avanzadas
+    if "comunes" in low and ("10" in low or "diez" in low):
+        data=requests.get("https://api.scryfall.com/cards/search?q=rarity:common+eur>10").json().get("data",[])
+        return "Comunes >10€:\n- " + "\n- ".join(f"{c['name']}: {c['prices']['eur']} €" for c in data[:10] if c['prices']['eur'])
+    if "modern horizons 2" in low or "modern horizons ii" in low:
+        card=requests.get("https://api.scryfall.com/cards/search?q=set:mh2+order:eur+dir:desc").json().get("data",[])[0]
+        return f"La carta más cara de MH2 es «{card['name']}» con {card['prices']['eur']} €."
+    if "eldrazi" in low and ("primera" in low or "primero" in low):
+        c=requests.get("https://api.scryfall.com/cards/search?q=type:eldrazi&order=released&dir=asc").json().get("data",[])[0]
+        return f"La primera Eldrazi es «{c['name']}», publicada el {c.get('released_at','?')}."
+    if "sol ring" in low and any(w in low for w in ["ediciones","versiones","cuantas","número"]):
+        base=get_card_info("Sol Ring"); total=0; nxt=base.get("prints_search_uri")
+        while nxt:
+            j=requests.get(nxt).json(); total+=len(j.get("data",[])); nxt=j.get("next_page")
+        return f"Sol Ring tiene {total} ediciones en Scryfall."
+    if any(w in low for w in ["counterspell","contrarrestar","contrahechizo"]) and "azul" in low:
+        data=requests.get("https://api.scryfall.com/cards/search?q=o:counter+c:u&order=edhrec").json().get("data",[])[:10]
+        return "Counterspells azules más usados:\n- " + "\n- ".join(c['name'] for c in data)
 
-    # este primer for es para ver si pide algo de una key de nuestro diccionario, recorre el diccionario por cada palabra
-    # Ver si esta hablando de una key
+    return "No entendí tu pregunta."
 
-    # Preguntas 7, 8
-    for palabra in definiciones_mtg:
-        if palabra.lower() in pregunta or palabra.lower().replace("-", " ") in pregunta:
-            return f"{palabra.title()}: {definiciones_mtg[palabra]}"
-
-    # aqui las preguntas normales sobre cartas
-
-    # Pregunta 1: Coste de maná de la carta
-    if check_word(["mana", "coste"], tokens, 0.5):
-        campo = "mana_cost"
-        descripcion = "El coste de maná de la carta es"
-
-    # Pregunta 2: Precio en euros de la carta
-    elif check_word(["precio", "cuesta", "vale", "dinero", "vender"], tokens, 0.5):
-        campo = "eur"
-        descripcion = "El precio de la carta en euros es"
-
-    # Pregunta 3: Tipo de la carta
-    elif check_word(["tipo", "clase", "categoria"], tokens, 0.5):
-        campo = "type_line"
-        descripcion = "La categoria de la carta es"
-
-    # Pregunta 4: Reglas de la carta
-    elif check_word(["texto", "instrucciones", "efecto", "descripcion", "hacer", "cara"], tokens, 0.5):
-        campo = "oracle_text"
-        descripcion = "El efecto de esta carta es el siguiente"
-
-    # Pregunta 5 - Imagen de la carta
-    elif check_word(["imagen", "foto"], tokens, 0.7):
-        nombre = extraer_nombre_carta(pregunta)
-        if nombre:
-            return obtener_imagen_carta(nombre)
-        else:
-            return "No pude encontrar el nombre de la carta para mostrarte la imagen."
-
-    # Pregunta 6 - Colores de la carta
-    elif check_word(["color", "colores"], tokens, 0.7):
-        nombre = extraer_nombre_carta(pregunta)
-        if nombre:
-            colores = obtener_colores_carta(nombre)
-            if isinstance(colores, list):
-                return f"La carta tiene los colores: {', '.join(colores)}"
-            else:
-                return colores
-        else:
-            return "No pude determinar el nombre de la carta para darte sus colores."
-
-    # Preguntas 7 y 8 ya se responden antes
-
-    # Pregunta 9 - Carta roja
-    elif "carta roja" in pregunta:
-        return f"Una carta roja aleatoria: {carta_aleatoria_color('red')}"
-
-    # Pregunta 10 - Mazo verde
-    elif "mazo verde" in pregunta:
-        mazo = crear_mazo_color("green")
-        return "Aquí tienes un mazo verde:\n" + "\n".join(mazo)
-
-    # Pregunta 11 - ¿Tiene alguna norma especial?
-    elif check_word(["norma especial", "habilidad especial"], tokens, 0.7):
-        nombre = extraer_nombre_carta(pregunta)
-        if nombre:
-            habilidades = buscar_habilidad_en_carta(nombre)
-            if isinstance(habilidades, list):
-                return f"La carta tiene las siguientes habilidades: {', '.join(habilidades)}"
-            else:
-                return habilidades
-        else:
-            return "No encontré el nombre de la carta."
-
-    # Pregunta 12 - Ataque o defensa
-    elif check_word(["ataque", "fuerza", "defensa", "resistencia"], tokens, 0.7):
-        nombre = extraer_nombre_carta(pregunta)
-        if nombre:
-            return obtener_fuerza_defensa(nombre)
-        else:
-            return "No encontré el nombre de la carta."
-
-    # Pregunta 13 - Legalidad
-    elif check_word(["legal", "permitida", "usar"], tokens, 0.7):
-        nombre = extraer_nombre_carta(pregunta)
-        if nombre:
-            return es_legal(nombre)
-        else:
-            return "No encontré el nombre de la carta para decirte si es legal."
-
-    # Pregunta 21: Pregunta a la api sobre cartas comunes que valen más de 10 euros
-    elif (check_word(["comunes", "común", "common"], tokens, 0.7) and
-          ("más de 10 euros" in pregunta or "mayor a 10 euros" in pregunta or "valen más de 10 euros" in pregunta)):
-        url = "https://api.scryfall.com/cards/search?q=rarity:common+eur>10"
-        response = requests.get(url)
-        if response.status_code == 200:
-            data = response.json()
-            cards = data.get("data", [])
-            if not cards:
-                return "No hay cartas comunes que valgan más de 10 euros."
-            # Listar las primeras 3 cartas y su precio para no saturar la respuesta
-            result_lines = []
-            for card in cards[:11]:
-                name = card.get("name")
-                price = card.get("prices", {}).get("eur")
-                if name and price:
-                    result_lines.append(f"{name}: {price}€")
-            return "Cartas comunes que valen más de 10 euros:\n" + "\n".join(result_lines)
-        else:
-            return "Hubo un problema al consultar la API de Scryfall."
-
-    # Pregunta 23: Pregunta a la api sobre la primera carta de Eldrazi
-    elif check_word(["eldrazi"], tokens, 0.7) and check_word(["primera", "primero", "inicial"], tokens, 0.6):
-        url = "https://api.scryfall.com/cards/search?q=type:eldrazi&order=released&dir=asc"
-        response = requests.get(url)
-        if response.status_code == 200:
-            data = response.json()
-            cards = data.get("data", [])
-            if cards:
-                first_card = cards[0]
-                name = first_card.get("name", "Desconocida")
-                released = first_card.get("released_at", "sin fecha")
-                set_name = first_card.get("set_name", "set desconocido")
-                return f"La primera carta Eldrazi fue «{name}», publicada el {released} en el set {set_name}."
-            else:
-                return "No se encontró ninguna carta del tipo Eldrazi."
-        else:
-            return "Hubo un problema al consultar la API de Scryfall."
-
-    # Pregunta 24: Pregunta a la api sobre el número de ediciones de Sol Ring
-    elif (check_word(["sol ring"], tokens, 0.7) and
-          check_word(["cuantas", "numero", "versiones", "ediciones"], tokens,0.6)):
-        carta = get_card_info("Sol Ring")
-        if carta and "prints_search_uri" in carta:
-            prints_url = carta["prints_search_uri"]
-            total = 0
-            next_page = prints_url
-            while next_page:
-                resp = requests.get(next_page).json()
-                total += len(resp.get("data", []))
-                next_page = resp.get("next_page", None)
-            return f"«Sol Ring» tiene un total de {total} ediciones distintas registradas en Scryfall."
-        else:
-            return "No pude obtener la información sobre Sol Ring desde la API."
-
-    # Pregunta 25: Pregunta a la api sobre los contrahechizos azules
-    elif check_word(["counterspell", "contrarrestar", "anular", "contrahechizo"], tokens, 0.6) and check_word(
-            ["azul", "azules"], tokens, 0.6):
-        url = "https://api.scryfall.com/cards/search?q=o%3Acounter+c%3Au&order=edhrec"
-        response = requests.get(url)
-        if response.status_code == 200:
-            data = response.json()
-            cards = data.get("data", [])[:10]
-            if cards:
-                nombres = [card["name"] for card in cards]
-                return "Aquí tienes una lista de los counterspells azules más populares:\n- " + "\n- ".join(nombres)
-            else:
-                return "No encontré counterspells azules populares en la base de datos."
-        else:
-            return "Ocurrió un error al consultar la API de Scryfall."
-
-    else:
-        return "No entendí tu pregunta."
-
-    return card_respond(campo, descripcion, pregunta)
-
-
-# Ejemplo de uso en modo interactivo
-if __name__ == "__main__":
+# ---------------------------------------------------------------------------
+# 5 · Función main y loop interactivo
+# ---------------------------------------------------------------------------
+def main() -> None:
+    # tu bucle interactivo, por ejemplo:
+    print("Chatbot MTG operativo (Escribe 'salir' para terminar')")
     while True:
-        pregunta_usuario = input("Tú: ")
-        if pregunta_usuario.lower().strip() in ("salir", "exit", "quit"):
+        q = input("Tú: ")
+        if q.lower().strip() in ("salir", "exit", "quit"):
             print("Bot: ¡Hasta luego!")
             break
-        print("Bot:", reemplazar_simbolos(responder_pregunta(pregunta_usuario)))
+        print("Bot:", responder_pregunta(q))
+
+if __name__ == "__main__":
+    main()
